@@ -71,6 +71,7 @@ jobs:
         run: bun install
 
       - name: Run tests
+        id: bun-test
         run: |
           echo "Running tests with Bun..."
           bun test 2>&1 | tee test-output.log
@@ -89,7 +90,7 @@ jobs:
         run: |
           echo "### 🧪 Bun Tests" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ $? -eq 0 ]; then
+          if [ "${{ steps.bun-test.outcome }}" = "success" ]; then
             echo "✅ All tests passed with Bun" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Some tests failed with Bun" >> $GITHUB_STEP_SUMMARY
@@ -181,17 +182,27 @@ jobs:
 
           # Search for Bun-specific imports
           echo "### 1. bun:sqlite imports:" | tee -a compatibility-report.txt
-          grep -r "from ['\"]bun:sqlite['\"]" src/ test/ 2>/dev/null | wc -l | xargs echo "   Files:" | tee -a compatibility-report.txt
-          grep -r "from ['\"]bun:sqlite['\"]" src/ test/ 2>/dev/null | tee -a compatibility-report.txt || echo "   None found" | tee -a compatibility-report.txt
+          if grep -r "from ['\"]bun:sqlite['\"]" src/ test/ 2>/dev/null | tee -a compatibility-report.txt; then
+            echo "" | tee -a compatibility-report.txt
+          else
+            echo "   None found" | tee -a compatibility-report.txt
+          fi
           echo "" | tee -a compatibility-report.txt
 
           echo "### 2. bun:test imports:" | tee -a compatibility-report.txt
-          grep -r "from ['\"]bun:test['\"]" src/ test/ 2>/dev/null | wc -l | xargs echo "   Files:" | tee -a compatibility-report.txt
-          grep -r "from ['\"]bun:test['\"]" src/ test/ 2>/dev/null | tee -a compatibility-report.txt || echo "   None found" | tee -a compatibility-report.txt
+          if grep -r "from ['\"]bun:test['\"]" src/ test/ 2>/dev/null | tee -a compatibility-report.txt; then
+            echo "" | tee -a compatibility-report.txt
+          else
+            echo "   None found" | tee -a compatibility-report.txt
+          fi
           echo "" | tee -a compatibility-report.txt
 
           echo "### 3. Other Bun APIs (Glob, $):" | tee -a compatibility-report.txt
-          grep -rn "from ['\"]bun['\"]" src/ 2>/dev/null | tee -a compatibility-report.txt || echo "   None found" | tee -a compatibility-report.txt
+          if grep -rn "from ['\"]bun['\"]" src/ 2>/dev/null | tee -a compatibility-report.txt; then
+            echo "" | tee -a compatibility-report.txt
+          else
+            echo "   None found" | tee -a compatibility-report.txt
+          fi
           echo "" | tee -a compatibility-report.txt
 
           echo "## Node.js Alternatives:" | tee -a compatibility-report.txt
@@ -217,7 +228,7 @@ jobs:
         run: |
           echo "" | tee -a compatibility-report.txt
           echo "## Package.json engines field:" | tee -a compatibility-report.txt
-          cat package.json | grep -A 2 '"engines"' | tee -a compatibility-report.txt
+          grep -A 2 '"engines"' package.json | tee -a compatibility-report.txt
           echo "" | tee -a compatibility-report.txt
 
       - name: List dependencies that may have Node.js compatibility issues
@@ -225,7 +236,7 @@ jobs:
           echo "## Dependencies analysis:" | tee -a compatibility-report.txt
           echo "" | tee -a compatibility-report.txt
           echo "### Main dependencies:" | tee -a compatibility-report.txt
-          cat package.json | grep -A 10 '"dependencies"' | grep -v "^{" | grep -v "^}" | tee -a compatibility-report.txt
+          grep -A 10 '"dependencies"' package.json | grep -v '^[{}]' | tee -a compatibility-report.txt
           echo "" | tee -a compatibility-report.txt
 
           echo "### Notes:" | tee -a compatibility-report.txt
